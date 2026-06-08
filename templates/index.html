@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Calculate silver ornament prices with purity, making charges, wastage, and GST.">
+  <title>Silver Ornament Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero__icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L15 9L22 10L17 15L18 22L12 18L6 22L7 15L2 10L9 9L12 2Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <h1>Silver Ornament Calculator</h1>
+      <p class="hero__subtitle">Accurate pricing for jewellery &amp; ornaments</p>
+    </header>
+
+    <main class="calculator">
+      <section class="card">
+        <h2 class="card__title">Enter Ornament Details</h2>
+
+        <form id="calculator-form" novalidate action="#" method="post">
+          <div class="form-grid">
+            <div class="field" data-field="gross_weight_grams">
+              <label for="gross_weight_grams">Gross Weight (grams)</label>
+              <input
+                type="number"
+                id="gross_weight_grams"
+                name="gross_weight_grams"
+                min="0.001"
+                step="0.001"
+                placeholder="e.g. 10.500"
+                required
+                aria-describedby="err-gross_weight_grams"
+              >
+              <span class="field-error" id="err-gross_weight_grams" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="stone_weight_grams">
+              <label for="stone_weight_grams">Stone / Other Weight (grams)</label>
+              <input
+                type="number"
+                id="stone_weight_grams"
+                name="stone_weight_grams"
+                min="0"
+                step="0.001"
+                value="0"
+                aria-describedby="err-stone_weight_grams"
+              >
+              <span class="field-error" id="err-stone_weight_grams" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="purity">
+              <label for="purity">Silver Purity</label>
+              <select id="purity" name="purity" required aria-describedby="err-purity">
+                {% for code, info in purity_options.items() %}
+                <option value="{{ code }}" {% if code == '925' %}selected{% endif %}>
+                  {{ info.label }}
+                </option>
+                {% endfor %}
+              </select>
+              <span class="field-error" id="err-purity" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="silver_rate_per_gram">
+              <label for="silver_rate_per_gram">Silver Rate (per gram)</label>
+              <div class="input-prefix">
+                <span class="input-prefix__symbol">₹</span>
+                <input
+                  type="number"
+                  id="silver_rate_per_gram"
+                  name="silver_rate_per_gram"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="e.g. 95.50"
+                  required
+                  aria-describedby="err-silver_rate_per_gram"
+                >
+              </div>
+              <span class="field-error" id="err-silver_rate_per_gram" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="making_charge_type">
+              <label for="making_charge_type">Making Charge Type</label>
+              <select id="making_charge_type" name="making_charge_type" aria-describedby="err-making_charge_type">
+                {% for code, label in making_charge_types.items() %}
+                <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <span class="field-error" id="err-making_charge_type" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="making_charge_value">
+              <label for="making_charge_value" id="making-label">Making Charge (₹ per gram)</label>
+              <input
+                type="number"
+                id="making_charge_value"
+                name="making_charge_value"
+                min="0"
+                step="0.01"
+                value="0"
+                aria-describedby="err-making_charge_value"
+              >
+              <span class="field-error" id="err-making_charge_value" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="wastage_percent">
+              <label for="wastage_percent">Wastage (%)</label>
+              <input
+                type="number"
+                id="wastage_percent"
+                name="wastage_percent"
+                min="0"
+                max="50"
+                step="0.1"
+                value="0"
+                aria-describedby="err-wastage_percent"
+              >
+              <span class="field-error" id="err-wastage_percent" role="alert"></span>
+            </div>
+
+            <div class="field" data-field="gst_percent">
+              <label for="gst_percent">GST (%)</label>
+              <input
+                type="number"
+                id="gst_percent"
+                name="gst_percent"
+                min="0"
+                max="100"
+                step="0.1"
+                value="{{ default_gst }}"
+                aria-describedby="err-gst_percent"
+              >
+              <span class="field-error" id="err-gst_percent" role="alert"></span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn--primary" id="calculate-btn">
+              Calculate Price
+            </button>
+            <button type="reset" class="btn btn--secondary" id="reset-btn">
+              Reset
+            </button>
+          </div>
+        </form>
+
+        <div id="price-banner" class="price-banner" hidden>
+          <span class="price-banner__label">Final Price</span>
+          <span id="price-banner-value" class="price-banner__value">₹0.00</span>
+        </div>
+
+        <p id="error-message" class="error-message" role="alert" hidden></p>
+      </section>
+
+      <section id="result-section" class="result-card" hidden>
+        <div class="result-card__header">
+          <h2>Price Breakdown</h2>
+          <div class="result-card__total">
+            <span>Final Price</span>
+            <strong id="total-price">₹0.00</strong>
+          </div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <span>Gross Weight</span>
+            <strong id="res-gross-weight">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Stone Weight</span>
+            <strong id="res-stone-weight">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Net Weight</span>
+            <strong id="res-net-weight">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Purity</span>
+            <strong id="res-purity">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Pure Silver</span>
+            <strong id="res-pure-weight">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Silver Rate</span>
+            <strong id="res-rate">—</strong>
+          </div>
+          <div class="result-item result-item--accent">
+            <span>Silver Value</span>
+            <strong id="res-silver-value">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Making Charges</span>
+            <strong id="res-making">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Wastage</span>
+            <strong id="res-wastage">—</strong>
+          </div>
+          <div class="result-item">
+            <span>Subtotal</span>
+            <strong id="res-subtotal">—</strong>
+          </div>
+          <div class="result-item">
+            <span>GST</span>
+            <strong id="res-gst">—</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}?v=3"></script>
+</body>
+</html>
